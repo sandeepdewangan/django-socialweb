@@ -44,7 +44,7 @@ Middleware are classes with methods that are globally executed during the reques
 
 
 
-## User Login
+## User Login Using Custom Forms
 
 `account/forms.py`
 
@@ -141,6 +141,132 @@ templates/
   </form>
 {% endblock %}
 ```
+
+
+
+## Authentication Views
+
+Django includes several forms and views in the authentication framework that you can use right away.
+
+It provide class based views to deal with authentication. All of them are located in `django.contrib.auth.views`.
+
+* LoginView
+* LogoutView
+* PasswordChangeView
+* PasswordChangeDoneView
+* PasswordResetView
+* PasswordResetDoneView
+* PasswordResetConfirmView
+* PasswordResetCompleteView
+
+
+
+## User Login and Logout Using Authentication Framework
+
+`account/urls.py`
+
+```python
+from django.urls import path
+from django.contrib.auth import views as auth_views
+# Import from project
+from .import views
+
+urlpatterns = [
+    # login view - handling forms by us
+    #path('login/', views.user_login, name='login'),
+     # login view - handling forms by django auth framework
+    path('login/', auth_views.LoginView.as_view(), name='login'),
+    path('logout/', auth_views.LoginView.as_view(), name='logout'),
+]
+```
+
+Default path where Django views expect templates to be is
+
+```html
+templates/
+	registration/
+		login.html
+		logged_out.html
+```
+
+<mark>**NOTE:** </mark>Make sure the account app should be placed at the top of the `INSTALLED_APPS` settings, so that Django use our templates by default.
+
+`login.html`
+
+```html
+{% extends "base.html" %}
+{% block title %}Log-in{% endblock %}
+{% block content %}
+  <h1>Log-in</h1>
+  <p>Please, use the following form to log-in:</p>
+  <form method="post">
+    {{ form.as_p }}
+    {% csrf_token %}
+    <p><input type="submit" value="Log in"></p>
+  </form>
+{% endblock %}
+```
+
+`logged_out.html`
+
+```html
+{% extends 'base.html' %}
+{% block content %}
+    <h1>Logged Out </h1>
+    You have been successfully logged out.
+    You can <a href="{% url 'login' %}">login</a>again.
+{% endblock content %}
+
+```
+
+`account/views.py`
+
+```python
+from django.contrib.auth.decorators import login_required
+@login_required
+def dashboard(request):
+    return render(request, 'account/dashboard.html')
+```
+
+`templates/account/dashboard.html`
+
+```html
+{% extends 'base.html' %}
+{% block content %}
+    <h1>Dashboard</h1>
+{% endblock content %}
+```
+
+`account/urls.py`
+
+```python
+urlpatterns = [
+	#.....
+    path('', views.dashboard, name='dashboard'),
+]
+```
+
+`settings.py`
+
+```python
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGIN_URL = 'login'
+LOGOUT_URL = 'logout'
+```
+
+
+
+### HttpRequest
+
+* The current user information is set in the `HttpRequest` object by the authentication middleware. 
+
+* We can access it by `request.user` 
+
+* The non authenticated user object is `AnonymousUser` 
+
+* Best way to check the current user is authentication is by accessing the read only attribute `is_authenticated`
+
+  
 
 
 

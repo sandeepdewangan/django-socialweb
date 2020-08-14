@@ -264,8 +264,43 @@ LOGOUT_URL = 'logout'
 
 * The non authenticated user object is `AnonymousUser` 
 
-* Best way to check the current user is authentication is by accessing the read only attribute `is_authenticated`
+* Best way to check the current user is authentication is by accessing the read only attribute `is_authenticated```
 
+  
+  
+  `base.html`
+  
+  ```html
+  <div id="header">
+    <span class="logo">Bookmarks</span>
+    {% if request.user.is_authenticated %}
+      <ul class="menu">
+        <li {% if section == "dashboard" %}class="selected"{% endif %}>
+          <a href="{% url "dashboard" %}">My dashboard</a>
+        </li>
+        <li {% if section == "images" %}class="selected"{% endif %}>
+          <a href="#">Images</a>
+        </li>
+        <li {% if section == "people" %}class="selected"{% endif %}>
+          <a href="#">People</a>
+        </li>
+      </ul>
+    {% endif %}
+    <span class="user">
+      {% if request.user.is_authenticated %}
+        Hello {{ request.user.first_name }},
+        <a href="{% url "logout" %}">Logout</a>
+      {% else %}
+        <a href="{% url "login" %}">Log-in</a>
+  	  {% endif %}
+    </span>
+  </div>
+  ```
+  
+  
+  
+  
+  
   
 
 

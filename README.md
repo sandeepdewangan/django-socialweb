@@ -161,7 +161,9 @@ It provide class based views to deal with authentication. All of them are locate
 
 
 
-## User Login and Logout Using Authentication Framework
+## Using Authentication Framework
+
+### User Login and Logout
 
 `account/urls.py`
 
@@ -187,9 +189,16 @@ templates/
 	registration/
 		login.html
 		logged_out.html
+		password_change_form.html
+		password_change_done.html
+		password_reset_form.html
+		password_reset_email.html
+		password_reset_done.html
+		password_reset_confirm.html
+		password_reset_complete.html
 ```
 
-<mark>**NOTE:** </mark>Make sure the account app should be placed at the top of the `INSTALLED_APPS` settings, so that Django use our templates by default.
+**NOTE:** Make sure the account app should be placed at the top of the `INSTALLED_APPS` settings, so that Django use our templates by default.
 
 `login.html`
 
@@ -294,14 +303,145 @@ LOGOUT_URL = 'logout'
         <a href="{% url "login" %}">Log-in</a>
   	  {% endif %}
     </span>
-  </div>
+  </div> 
   ```
   
-  
-  
-  
-  
-  
 
 
+
+### Change Password Views
+
+`account/urls.py`
+
+```python
+path('password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
+path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
+```
+
+`password_change_form.html`  - see above directory structure.
+
+```html
+{% extends "base.html" %}
+{% block title %}Change your password{% endblock %}
+{% block content %}
+  <h1>Change your password</h1>
+  <p>Use the form below to change your password.</p>
+  <form method="post">
+    {{ form.as_p }}
+    <p><input type="submit" value="Change"></p>
+    {% csrf_token %}
+  </form>
+{% endblock %}
+```
+
+`password_change_done.html`
+
+```html
+{% extends "base.html" %}
+{% block title %}Password changed{% endblock %}
+{% block content %}
+  <h1>Password changed</h1>
+  <p>Your password has been successfully changed.</p>
+{% endblock %}
+```
+
+
+
+### Password Reset
+
+`account/urls.py`
+
+```python
+# reset password urls
+    path('password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
+    path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
+```
+
+`password_reset_form.html`
+
+```html
+{% extends "base.html" %}
+{% block title %}Reset your password{% endblock %}
+{% block content %}
+  <h1>Forgotten your password?</h1>
+  <p>Enter your e-mail address to obtain a new password.</p>
+  <form method="post">
+    {{ form.as_p }}
+    <p><input type="submit" value="Send e-mail"></p>
+    {% csrf_token %}
+  </form>
+{% endblock %}
+```
+
+`password_reset_email.html`
+
+The password_reset_email.html template will be used to render the email sent to users to reset their password.
+
+```html
+Someone asked for password reset for email {{ email }}. 
+Follow the link below:
+
+{{ protocol }}://{{ domain }}{% url "password_reset_confirm" uidb64=uid token=token %}
+Your username, in case you've forgotten: {{ user.get_username }}
+```
+
+`password_reset_done.html`
+
+```html
+{% extends "base.html" %}
+{% block title %}Reset your password{% endblock %}
+{% block content %}
+  <h1>Reset your password</h1>
+  <p>We've emailed you instructions for setting your password.</p>
+  <p>If you don't receive an email, please make sure you've entered the address you registered with.</p>
+{% endblock %}
+```
+
+`password_reset_confirm.html`
+
+```html
+{% extends "base.html" %}
+{% block title %}Reset your password{% endblock %}
+{% block content %}
+  <h1>Reset your password</h1>
+  {% if validlink %}
+    <p>Please enter your new password twice:</p>
+    <form method="post">
+      {{ form.as_p }}
+      {% csrf_token %}
+      <p><input type="submit" value="Change my password" /></p>
+    </form>
+  {% else %}
+    <p>The password reset link was invalid, possibly because it has already been used. Please request a new password reset.</p>
+  {% endif %}
+{% endblock %}
+```
+
+`password_reset_complete.html`
+
+```html
+{% block title %}Password reset{% endblock %}
+{% block content %}
+  <h1>Password set</h1>
+  <p>Your password has been set. You can <a href="{% url "login" %}">log in now</a></p>
+{% endblock %}
+```
+
+Edit `registration/login.html`
+
+```html
+<p><a href="{% url "password_reset" %}">Forgotten your password?</a></p>
+```
+
+
+
+**For this we need to add a Simple Mail Transfer Protocol (SMTP) configuration to the settings.py file of your project so that Django is able to send emails.** For this reference [Django Book](Chapter 2, Enhancing Your Blog with Advanced Features.) : <mark>TODO</mark>
+
+However, during development, you can configure Django to write emails to the standard output instead of sending them through an SMTP server. Django provides an email backend to write emails to the console. Edit the `settings.py` file of your project, and add the following line:
+
+```python
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+```
 

@@ -714,3 +714,47 @@ def edit(request):
 
 
 
+## Custom Authentication Backend
+
+Django allows you to authenticate against different sources. The `AUTHENTICATION_BACKENDS` setting includes the list of authentication backends for your project. By default, this setting is set as follows: `['django.contrib.auth.backends.ModelBackend']`
+The default `ModelBackend` authenticates users against the database using the user model of `django.contrib.auth`. This will suit most of your projects. However, you can create custom backends to authenticate your user against other sources, such as a Lightweight Directory Access Protocol (LDAP) directory or any other system.
+
+Django provides a simple way to define your own authentication backends. An authentication backend is a class that provides the following two methods: 
+
+* `authenticate()`: It takes the request object and user credentials as parameters. It has to return a user object that matches those credentials if the credentials are valid, or None otherwise. The request parameter is an HttpRequest object, or None if it's not provided to authenticate(). 
+
+* `get_user()`: This takes a user ID parameter and has to return a user object.
+
+Example
+
+```python
+from django.contrib.auth.models import User
+class EmailAuthBackend(object):
+    """
+    Authenticate using an e-mail address.
+    """
+    def authenticate(self, request, username=None, password=None):
+        try:
+            user = User.objects.get(email=username)
+            if user.check_password(password):
+                return user
+            return None
+        except User.DoesNotExist:
+            return None
+    def get_user(self, user_id):
+        try:
+            return User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return None
+```
+
+`settings.py`
+
+```python
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'account.authentication.EmailAuthBackend', # <-- CUSTOM Backend
+]
+```
+
+Remember that Django will try to authenticate the user against each of the backends, so now you should be able to log in seamlessly using your username or email account. User credentials will be checked using the `ModelBackend` authentication backend, and if no user is returned, the credentials will be checked using your custom `EmailAuthBackend` backend.

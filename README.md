@@ -4,6 +4,12 @@ Table of Contents
 
 [TOC]
 
+## Left Overs
+
+1. Adding social authentication to your site
+
+2. 
+
 ## Project Setup
 
 Start Project
@@ -758,3 +764,49 @@ AUTHENTICATION_BACKENDS = [
 ```
 
 Remember that Django will try to authenticate the user against each of the backends, so now you should be able to log in seamlessly using your username or email account. User credentials will be checked using the `ModelBackend` authentication backend, and if no user is returned, the credentials will be checked using your custom `EmailAuthBackend` backend.
+
+## Social Authentication
+
+Install package
+
+`pip install social-auth-app-django==3.1.0`
+
+Then add `social_django` to the INSTALLED_APPS setting in the settings.py file of your project:
+
+```python
+INSTALLED_APPS = [
+    #...
+    'social_django',
+]
+```
+
+Then migrate
+
+`python manage.py migrate`
+
+`bookmark/urls.py`
+
+```python
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('account/', include('account.urls')),
+    path('social-auth/', include('social_django.urls', namespace='social')), # New
+]
+```
+
+Several social services will not allow redirecting users to 127.0.0.1 or localhost after a successful authentication; they expect a domain name.
+In order to make social authentication work, you will need a domain. To fix this on Linux or macOS, edit your /etc/hosts file and add the following line to it: 
+
+```ini
+127.0.0.1 mysite.com
+```
+
+This will tell your computer to point the mysite.com hostname to your own machine. If you are using Windows, your hosts file is located at C:\Windows\System32\Drivers\etc\hosts.
+
+Edit the settings.py file of your project and edit the `ALLOWED_HOSTS` setting as follows:
+
+```python
+ALLOWED_HOSTS = ['mysite.com', 'localhost', '127.0.0.1']
+```
+
+<mark>TODO</mark>

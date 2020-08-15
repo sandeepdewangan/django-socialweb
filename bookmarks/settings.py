@@ -25,13 +25,14 @@ SECRET_KEY = '^j809zv9xk!8)uj0vbia3^7rwt#yq-mg_99b1=zxxic^q9ut=h'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['bookmarks.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
 
 INSTALLED_APPS = [
     'account.apps.AccountConfig', # bookmark application
+    'social_django',    # social login
 
     'django.contrib.admin',
     'django.contrib.auth',

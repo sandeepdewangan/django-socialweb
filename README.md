@@ -652,9 +652,65 @@ path('edit/', views.edit, name='edit'),
 {% endblock %}
 ```
 
+## Messages Framework
 
+When allowing users to interact with your platform, there are many cases where you might want to inform them about the result of their actions. Django has a built-in messages framework that allows you to display one-time notifications to your users.
 
+The messages framework is located at `django.contrib.messages` and is included in the default `INSTALLED_APPS`
+Messages are stored in a cookie by default (falling back to session storage), and they are displayed in the next request from the user.
 
+**Usage**
+
+```python
+from django.contrib import messages
+messages.error(request, 'Something went wrong')
+```
+
+* success()
+* info()
+* warning()
+* error()
+* debug()
+
+The messages framework includes the context processor `django.contrib.messages.context_processors.messages`, which adds a messages variable to the request context. You can find it in the `context_processors` list of the TEMPLATES setting of your project. You can use the messages variable in your templates to display all existing messages to the user.
+
+`base.html`
+
+```python
+{# Message Framework #}
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li class="{{ message.tags }}">
+        {{ message|safe }}
+        <a href="#" class="close">x</a>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+```
+
+**NOTE**: A context processor is a Python function that takes the request object as an argument and returns a dictionary that gets added to the request context.
+
+ <mark> You will learn how to create your own context processors in Chapter 7, Building an Online Shop. TODO </mark>
+
+`account/views.py`
+
+```python
+from django.contrib import messages
+@login_required
+def edit(request):
+    if request.method == 'POST':
+        # ....
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, 'Profile updated successfully') # <---- NEW
+        else:
+            messages.error(request, 'Error updating your profile') # <---- NEW
+	# ...
+    return render(request, 'account/edit.html', {'user_form': user_form, 'profile_form': profile_form})
+```
 
 
 

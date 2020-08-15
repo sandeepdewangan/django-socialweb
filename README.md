@@ -445,3 +445,216 @@ However, during development, you can configure Django to write emails to the sta
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ```
 
+
+
+## User Registration and User Profiles
+
+### User Registration
+
+Initially, we will create a form to let the user enter a username, their real name, and a password.
+
+`account/forms.py`
+
+```python
+from django.contrib.auth.models import User
+class UserRegistrationForm(forms.ModelForm):
+    password = forms.CharField(label='Password', widget=forms.PasswordInput)
+    password2 = forms.CharField(label='Repeat password', widget=forms.PasswordInput)
+    class Meta:
+        model = User
+        fields = ('username', 'first_name', 'email')
+        
+    def clean_password2(self):
+        cd = self.cleaned_data
+        if cd['password'] != cd['password2']:
+            raise forms.ValidationError('Passwords don\'t match.')
+        return cd['password2']
+```
+
+`account/views.py`
+
+```python
+from .forms import LoginForm, UserRegistrationForm
+def register(request):
+    if request.method == 'POST':
+        user_form = UserRegistrationForm(request.POST)
+        if user_form.is_valid():
+            # Create a new user object but avoid saving it yet
+            new_user = user_form.save(commit=False)
+            # Set the chosen password
+            new_user.set_password(
+                user_form.cleaned_data['password'])
+            # Save the User object
+            new_user.save()
+            return render(request, 'account/register_done.html',
+                          {'new_user': new_user})
+    else:
+        user_form = UserRegistrationForm()
+    return render(request,
+                  'account/register.html',
+                  {'user_form': user_form})
+```
+
+Instead of saving the raw password entered by the user, you use the `set_password()` method of the user model that handles hashing.
+
+`account/urls.py`
+
+```python
+path('register/', views.register, name='register'),
+```
+
+`account/register.html`
+
+```html
+{% extends "base.html" %}
+{% block title %}Create an account{% endblock %}
+{% block content %}
+  <h1>Create an account</h1>
+  <p>Please, sign up using the following form:</p>
+  <form method="post">
+    {{ user_form.as_p }}
+    {% csrf_token %}
+    <p><input type="submit" value="Create my account"></p>
+  </form>
+{% endblock %}
+```
+
+`account/register_done.html`
+
+```python
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+{% block content %}
+  <h1>Welcome {{ new_user.first_name }}!</h1>
+  <p>Your account has been successfully created. Now you can <a href="{% url "login" %}">log in</a>.</p>
+{% endblock %}
+```
+
+
+
+### Extending User Model  (Profiles)
+
+The best way to extend user is by creating a profile model that contains all additional fields and a one-to-one relationship with the Django User model.
+
+`account/models.py`
+
+```python
+from django.conf import settings
+class Profile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    date_of_birth = models.DateField(blank=True, null=True)
+    photo = models.ImageField(upload_to='users/%Y/%m/%d/', blank=True)
+    
+    def __str__(self):
+        return f'Profile for user {self.user.username}'
+```
+
+The `get_user_model()` method to retrieve the user model and the `AUTH_USER_MODEL` setting to refer to it when defining a model's relationship with the user model, instead of referring to the auth user model directly.
+
+The photo field is an ImageField field. You will need to install the Pillow library to handle images. Install Pillow by running the following command in your shell:
+
+`pip install Pillow==7.0.`
+
+To enable Django to serve media files uploaded by users with the development server, add the following settings to the settings.py file of your project:
+
+```python
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+```
+
+`MEDIA_URL` is the base URL used to serve the media files uploaded by users, and `MEDIA_ROOT` is the local path where they reside. You build the path dynamically relative to your project path to make your code more generic.
+
+`bookmarks/urls.py`
+
+```python
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('account/', include('account.urls')),
+]
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL,
+                          document_root=settings.MEDIA_ROOT)
+```
+
+**NOTE**: The `static()` helper function is suitable for development, but not for production use. Django is very inefficient at serving static files. Never serve your static files with Django in a production environment. <mark> You will learn how to serve static files in a production environment in Chapter 14, Going Live. TODO </mark>
+
+`account/admin.py`
+
+```python
+from .models import Profile
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'date_of_birth', 'photo']
+```
+
+### User Profile Edit
+
+`account/forms.py`
+
+```python
+class UserEditForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email')
+class ProfileEditForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ('date_of_birth', 'photo')
+```
+
+When users register on your site, you will create an empty profile associated with them.
+
+```python
+Profile.objects.create(user=new_user)
+```
+
+`account/views.py`
+
+```python
+@login_required
+def edit(request):
+    if request.method == 'POST':
+        user_form = UserEditForm(instance=request.user, data=request.POST)
+        profile_form = ProfileEditForm( instance=request.user.profile, data=request.POST, files=request.FILES)
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+    else:
+        user_form = UserEditForm(instance=request.user)
+        profile_form = ProfileEditForm(instance=request.user.profile)
+									
+	return render(request, 'account/edit.html', {'user_form': user_form, 'profile_form': profile_form})
+```
+
+`account/urls.py`
+
+```python
+path('edit/', views.edit, name='edit'),
+```
+
+`templates/account/edit.html`
+
+```html
+{% extends "base.html" %}
+{% block title %}Edit your account{% endblock %}
+{% block content %}
+  <h1>Edit your account</h1>
+  <p>You can edit your account using the following form:</p>
+  <form method="post" enctype="multipart/form-data">
+    {{ user_form.as_p }}
+    {{ profile_form.as_p }}
+    {% csrf_token %}
+    <p><input type="submit" value="Save changes"></p>
+  </form>
+{% endblock %}
+```
+
+
+
+
+
+
+
